@@ -1,0 +1,950 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>প্রিমিয়াম বিল কালেকশন ও ম্যানেজমেন্ট পোর্টাল</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Hind Siliguri', sans-serif; background-color: #f8fafc; }
+        .glass-card { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); }
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col text-slate-800">
+
+    <!-- হেডার -->
+    <header id="appHeader" class="bg-gradient-to-r from-blue-700 to-indigo-800 text-white p-4 shadow-lg flex justify-between items-center hidden sticky top-0 z-40">
+        <div>
+            <h1 class="text-xl font-bold tracking-wide">স্মার্ট বিল কালেকশন</h1>
+            <p class="text-xs text-blue-200" id="userBadge"></p>
+        </div>
+        <div class="flex items-center gap-2">
+            <a id="whatsappSupportBtn" href="#" target="_blank" class="bg-emerald-500 hover:bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 shadow">
+                💬 WhatsApp সাপোর্ট
+            </a>
+            <span id="collectorPointBadge" class="bg-amber-400 text-slate-900 font-bold px-3 py-1 rounded-full text-xs shadow hidden">পয়েন্ট: 0</span>
+            <button onclick="logout()" class="bg-red-500 hover:bg-red-600 px-3 py-1.5 rounded-lg text-xs font-semibold shadow">লগআউট</button>
+        </div>
+    </header>
+
+    <!-- ১. লগইন স্ক্রিন -->
+    <div id="loginView" class="flex-grow flex items-center justify-center p-4 bg-gradient-to-br from-blue-500 to-indigo-900">
+        <div class="bg-white p-8 rounded-3xl shadow-2xl w-full max-w-md border border-slate-100">
+            <div class="text-center mb-8">
+                <div class="w-16 h-16 bg-blue-600 text-white rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg text-2xl font-bold">৳</div>
+                <h2 class="text-3xl font-extrabold text-slate-900">প্রবেশ করুন</h2>
+                <p class="text-sm text-slate-500 mt-1">আপনার ইউজারনেম ও পাসওয়ার্ড ব্যবহার করুন</p>
+            </div>
+            <form onsubmit="handleLogin(event)" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1">ইউজারনেম</label>
+                    <input type="text" id="loginUser" required placeholder="আপনার ইউজারনেম" class="w-full px-4 py-3 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1">পাসওয়ার্ড</label>
+                    <input type="password" id="loginPass" required placeholder="••••••••" class="w-full px-4 py-3 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition">
+                </div>
+                <button type="submit" class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold py-3.5 rounded-xl shadow-lg transition transform active:scale-95">লগইন</button>
+            </form>
+            <p id="loginError" class="text-red-500 text-sm text-center mt-4 font-medium hidden">⚠️ ভুল ইউজারনেম বা পাসওয়ার্ড!</p>
+        </div>
+    </div>
+
+    <!-- ২. কালেক্টর চয়েস ড্যাশবোর্ড -->
+    <div id="collectorChoiceView" class="flex-grow flex flex-col items-center justify-center p-4 max-w-md mx-auto w-full hidden">
+        <div class="text-center mb-6">
+            <h2 class="text-2xl font-bold text-slate-800">বিলের ধরন নির্বাচন করুন</h2>
+            <p class="text-sm text-slate-500">যে বিলটি কালেকশন করতে চান তা সিলেক্ট করুন</p>
+        </div>
+        <div class="w-full space-y-4">
+            <button onclick="openBillSection('net')" class="w-full bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white p-6 rounded-2xl shadow-xl flex items-center justify-between transition transform hover:-translate-y-1">
+                <div class="text-left">
+                    <span class="block text-2xl font-bold">🌐 নেট বিল (Internet)</span>
+                    <span class="text-xs text-indigo-100 mt-1 block">ব্রডব্যান্ড কাস্টমার প্যানেল</span>
+                </div>
+                <span class="text-2xl opacity-80">➔</span>
+            </button>
+            <button onclick="openBillSection('dish')" class="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white p-6 rounded-2xl shadow-xl flex items-center justify-between transition transform hover:-translate-y-1">
+                <div class="text-left">
+                    <span class="block text-2xl font-bold">📺 ডিশ বিল (CATV)</span>
+                    <span class="text-xs text-emerald-100 mt-1 block">কেবল টিভি কাস্টমার প্যানেল</span>
+                </div>
+                <span class="text-2xl opacity-80">➔</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- ৩. কালেক্টর কাস্টমার লিস্ট ও টাস্ক ভিউ -->
+    <div id="customerListView" class="flex-grow p-4 max-w-4xl mx-auto w-full hidden">
+        <div class="flex justify-between items-center mb-4 bg-white p-3 rounded-xl shadow-sm border border-slate-200">
+            <button id="backToChoiceBtn" onclick="showChoiceView()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-lg text-sm font-semibold hidden">⬅ ফিরে যান</button>
+            <h2 id="listSectionTitle" class="text-lg font-bold text-slate-800">কাস্টমার তালিকা</h2>
+            <button onclick="switchTab('tabMyTasks')" id="myTasksTabBtn" class="bg-amber-100 text-amber-900 px-3 py-1.5 rounded-lg text-xs font-bold border border-amber-300 relative">
+                📋 আমার টাস্ক <span id="taskCountBadge" class="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full absolute -top-1 -right-1 hidden">0</span>
+            </button>
+        </div>
+
+        <div id="customersTabSection">
+            <input type="text" id="searchCustomer" onkeyup="filterCustomers()" placeholder="🔍 কাস্টমার আইডি, নাম, ফোন বা এলাকা দিয়ে খুঁজুন..." class="w-full p-3.5 mb-4 border border-slate-300 rounded-xl bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <div id="customersContainer" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
+        </div>
+
+        <!-- টাস্ক লিস্ট ট্যাব -->
+        <div id="myTasksTabSection" class="hidden space-y-4">
+            <h3 class="text-md font-bold text-slate-800">অ্যাডমিন কর্তৃক এসাইনকৃত টাস্ক</h3>
+            <div id="collectorTasksContainer" class="space-y-3"></div>
+        </div>
+    </div>
+
+    <!-- পেমেন্ট সাবমিশন পপআপ (Modal) -->
+    <div id="paymentModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 hidden z-50">
+        <div class="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl border border-slate-100 animate-in fade-in zoom-in duration-200">
+            <h3 class="text-2xl font-bold text-slate-900 mb-1">বিল কালেকশন সাবমিট</h3>
+            <p class="text-sm text-slate-500 mb-4 bg-slate-50 p-3 rounded-xl border" id="modalCustomerInfo"></p>
+            
+            <form onsubmit="submitPaymentRequest(event)" class="space-y-4">
+                <input type="hidden" id="payCustomerId">
+                <input type="hidden" id="payCustomerName">
+                <input type="hidden" id="payBillType">
+
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1">পেমেন্ট মাধ্যম</label>
+                    <select id="payMethod" required class="w-full p-3 border border-slate-300 rounded-xl bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none font-medium">
+                        <option value="bKash">বিকাশ (bKash)</option>
+                        <option value="Nagad">নগদ (Nagad)</option>
+                        <option value="Rocket">রকেট (Rocket)</option>
+                        <option value="Bangla QR">বাংলা QR (Bangla QR)</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1">টাকার পরিমাণ (Amount)</label>
+                    <input type="number" id="payAmount" required placeholder="যেমন: 500" class="w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none font-bold text-lg">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1">ট্রানজেকশন আইডি (Transaction ID)</label>
+                    <input type="text" id="payTrxId" required placeholder="TrxID লিখুন" class="w-full p-3 border border-slate-300 rounded-xl font-mono uppercase focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                </div>
+
+                <div class="flex gap-3 pt-4 border-t">
+                    <button type="button" onclick="closePaymentModal()" class="w-1/2 bg-slate-100 hover:bg-slate-200 text-slate-800 py-3 rounded-xl font-semibold transition">বাতিল</button>
+                    <button type="submit" class="w-1/2 bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-bold shadow-lg shadow-blue-500/30 transition">জমা দিন</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ৪. অ্যাডমিন প্যানেল -->
+    <div id="adminView" class="flex-grow p-4 max-w-6xl mx-auto w-full hidden">
+        <!-- অ্যাডমিন ন্যাভবার -->
+        <div class="flex gap-2 overflow-x-auto pb-3 mb-6 border-b border-slate-200 scrollbar-none">
+            <button onclick="switchAdminTab('requests', this)" class="admin-tab bg-blue-600 text-white px-5 py-2.5 rounded-xl text-sm font-bold whitespace-nowrap shadow transition">পেন্ডিং রিকোয়েস্ট</button>
+            <button onclick="switchAdminTab('collectors', this)" class="admin-tab bg-white text-slate-700 px-5 py-2.5 rounded-xl text-sm font-bold whitespace-nowrap border border-slate-200 shadow-sm transition">কালেক্টর ম্যানেজমেন্ট</button>
+            <button onclick="switchAdminTab('customers', this)" class="admin-tab bg-white text-slate-700 px-5 py-2.5 rounded-xl text-sm font-bold whitespace-nowrap border border-slate-200 shadow-sm transition">কাস্টমার ডেটাবেজ</button>
+            <button onclick="switchAdminTab('tasks', this)" class="admin-tab bg-white text-slate-700 px-5 py-2.5 rounded-xl text-sm font-bold whitespace-nowrap border border-slate-200 shadow-sm transition">টাস্ক রিপোর্টিং</button>
+        </div>
+
+        <!-- ট্যাব ১: পেন্ডিং রিকোয়েস্ট -->
+        <div id="tabRequests" class="space-y-4">
+            <div class="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-6 rounded-2xl shadow-lg flex justify-between items-center">
+                <div>
+                    <h3 class="text-xl font-extrabold">অ্যাপ্রুভালের জন্য অপেক্ষমাণ পেমেন্ট</h3>
+                    <p class="text-sm text-blue-100">কালেক্টরদের সাবমিট করা ট্রানজেকশন যাচাই করে অনুমোদন করুন</p>
+                </div>
+                <div class="bg-white/20 px-4 py-2 rounded-xl text-center">
+                    <span id="pendingCountDisplay" class="text-2xl font-black block">0</span>
+                    <span class="text-xs font-semibold uppercase tracking-wider">পেন্ডিং</span>
+                </div>
+            </div>
+            <div id="pendingRequestsList" class="space-y-3"></div>
+        </div>
+
+        <!-- ট্যাব ২: কালেক্টর ম্যানেজমেন্ট -->
+        <div id="tabCollectors" class="hidden space-y-6">
+            <!-- কালেক্টর তৈরির ফর্ম -->
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                <h3 class="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">➕ নতুন কালেক্টর তৈরি করুন</h3>
+                <form onsubmit="createCollector(event)" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 mb-1">কালেক্টরের নাম *</label>
+                        <input type="text" id="newColName" required placeholder="নাম লিখুন" class="w-full p-3 border border-slate-300 rounded-xl">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 mb-1">ইউজারনেম *</label>
+                        <input type="text" id="newColUser" required placeholder="username" class="w-full p-3 border border-slate-300 rounded-xl font-mono">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 mb-1">পাসওয়ার্ড *</label>
+                        <input type="password" id="newColPass" required placeholder="password" class="w-full p-3 border border-slate-300 rounded-xl font-mono">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 mb-1">বিল পারমিশন *</label>
+                        <select id="newColPerm" class="w-full p-3 border border-slate-300 rounded-xl bg-white font-medium">
+                            <option value="both">উভয় বিল (Net & Dish)</option>
+                            <option value="net">শুধুমাত্র নেট বিল</option>
+                            <option value="dish">শুধুমাত্র ডিশ বিল</option>
+                        </select>
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-xs font-bold text-slate-600 mb-1">দায়িত্বপ্রাপ্ত এরিয়া বা গ্রাম (কমা দিয়ে লিখুন, বা All লিখুন) *</label>
+                        <input type="text" id="newColAreas" required placeholder="যেমন: তাহেরপুর, কার্তিকপাড়া অথবা All" class="w-full p-3 border border-slate-300 rounded-xl font-medium">
+                    </div>
+                    <button type="submit" class="md:col-span-3 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-xl shadow-md transition">কালেক্টর সেভ করুন</button>
+                </form>
+            </div>
+
+            <!-- কালেক্টর লিস্ট -->
+            <div>
+                <h3 class="text-lg font-bold text-slate-900 mb-3">নিযুক্ত কালেক্টরগণ ও পয়েন্ট নিয়ন্ত্রণ</h3>
+                <div id="collectorsAdminList" class="space-y-4"></div>
+            </div>
+        </div>
+
+        <!-- ট্যাব ৩: কাস্টমার ম্যানেজমেন্ট (বাল্ক + ম্যানুয়াল) -->
+        <div id="tabCustomers" class="hidden space-y-6">
+            <!-- বাল্ক ইনপুট ও এক্সপোর্ট -->
+            <div class="bg-gradient-to-br from-slate-900 to-slate-800 text-white p-6 rounded-2xl shadow-xl space-y-4">
+                <div class="flex flex-col md:flex-row justify-between md:items-center gap-4 border-b border-slate-700 pb-4">
+                    <div>
+                        <h3 class="text-xl font-bold">📂 বাল্ক কাস্টমার ডেটা ম্যানেজমেন্ট (Excel / CSV)</h3>
+                        <p class="text-xs text-slate-400">অ্যাডভান্সড ডেমো ফাইল ব্যবহার করে হাজার হাজার কাস্টমার একসাথে আপলোড ও ব্যাকআপ নিন</p>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        <button onclick="downloadDemoExcel()" class="bg-amber-500 hover:bg-amber-600 text-slate-950 font-extrabold px-4 py-2.5 rounded-xl text-xs shadow transition flex items-center gap-1">⬇ ডেমো ফাইল ডাউনলোড</button>
+                        <button onclick="exportAllCustomersExcel()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-4 py-2.5 rounded-xl text-xs shadow transition flex items-center gap-1">📤 ব্যাকআপ এক্সপোর্ট</button>
+                    </div>
+                </div>
+
+                <div class="flex flex-col sm:flex-row items-center gap-4 bg-slate-800/80 p-4 rounded-xl border border-slate-700">
+                    <input type="file" id="bulkFileInput" accept=".csv, .xlsx, .xls" class="w-full text-sm text-slate-300 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-blue-600 file:text-white hover:file:bg-blue-500 cursor-pointer">
+                    <button onclick="processBulkUpload()" id="bulkUploadBtn" class="w-full sm:w-auto bg-emerald-500 hover:bg-emerald-600 text-white font-extrabold px-6 py-3 rounded-xl text-sm shadow-lg whitespace-nowrap transition">⬆ বাল্ক ফাইল প্রসেস করুন</button>
+                </div>
+                <p id="bulkStatusMsg" class="text-sm font-bold text-amber-400 hidden"></p>
+            </div>
+
+            <!-- ম্যানুয়াল এন্ট্রি ফর্ম -->
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                <h3 class="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">✍️ কাস্টমার ম্যানুয়ালি যুক্ত করুন</h3>
+                <form onsubmit="addManualCustomer(event)" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 mb-1">বিলের ধরন *</label>
+                        <select id="custType" class="w-full p-3 border border-slate-300 rounded-xl bg-white font-medium">
+                            <option value="net">নেট বিল কাস্টমার</option>
+                            <option value="dish">ডিশ বিল কাস্টমার</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 mb-1">কাস্টমার আইডি (ম্যানুয়াল) *</label>
+                        <input type="text" id="custId" required placeholder="যেমন: CID-101" class="w-full p-3 border border-slate-300 rounded-xl font-bold">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 mb-1">কাস্টমারের নাম *</label>
+                        <input type="text" id="custName" required placeholder="নাম (বাংলা/ইংরেজি)" class="w-full p-3 border border-slate-300 rounded-xl font-medium">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 mb-1">PPPoE ইউজার আইডি</label>
+                        <input type="text" id="custUserId" placeholder="ইউজারনেম বা আইডি" class="w-full p-3 border border-slate-300 rounded-xl font-mono">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 mb-1">পাসওয়ার্ড</label>
+                        <input type="text" id="custPassword" placeholder="পাসওয়ার্ড" class="w-full p-3 border border-slate-300 rounded-xl font-mono">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 mb-1">মোবাইল নম্বর</label>
+                        <input type="text" id="custPhone" placeholder="017XXXXXXXX" class="w-full p-3 border border-slate-300 rounded-xl">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 mb-1">মাসিক বিল (টাকা)</label>
+                        <input type="number" id="custBill" required placeholder="500" class="w-full p-3 border border-slate-300 rounded-xl font-bold text-blue-600">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 mb-1">এরায়া / গ্রামের নাম *</label>
+                        <input type="text" id="custAddress" required placeholder="বাজার বা গ্রামের নাম" class="w-full p-3 border border-slate-300 rounded-xl font-medium">
+                    </div>
+                    <button type="submit" class="md:col-span-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 rounded-xl shadow transition">কাস্টমার ডেটাবেজে সেভ করুন</button>
+                </form>
+            </div>
+
+            <!-- ফিল্টারিং ও টেবিল প্রিভিউ -->
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                <div class="flex flex-col sm:flex-row justify-between items-center gap-4 mb-4">
+                    <h3 class="text-lg font-bold text-slate-900">মোট সংরক্ষিত কাস্টমার (<span id="totalCustCount">0</span>)</h3>
+                    <input type="text" id="searchAdminCust" onkeyup="filterAdminCustomers()" placeholder="ফিল্টার করুন..." class="w-full sm:w-64 p-2.5 border border-slate-300 rounded-xl text-sm">
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse text-sm">
+                        <thead>
+                            <tr class="bg-slate-100 border-b border-slate-200 text-slate-700 font-bold">
+                                <th class="p-3">ধরন</th>
+                                <th class="p-3">কাস্টমার আইডি</th>
+                                <th class="p-3">নাম ও ফোন</th>
+                                <th class="p-3">এরিয়া / গ্রাম</th>
+                                <th class="p-3">ইউজার / পাস</th>
+                                <th class="p-3">মাসিক বিল</th>
+                                <th class="p-3 text-right">অ্যাকশন</th>
+                            </tr>
+                        </thead>
+                        <tbody id="adminCustomerTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ট্যাব ৪: টাস্ক রিপোর্টিং সিস্টেম -->
+        <div id="tabTasks" class="hidden space-y-6">
+            <div class="bg-gradient-to-r from-teal-600 to-emerald-600 text-white p-6 rounded-2xl shadow-lg">
+                <h3 class="text-xl font-extrabold">অ্যাডমিন টাস্ক ও কমপ্লায়েন্স ট্র্যাকার</h3>
+                <p class="text-sm text-teal-100">যেকোনো কাস্টমারের সমস্যা সমাধানের জন্য কালেক্টর এসাইন করুন এবং রিপোর্ট ট্র্যাক করুন</p>
+            </div>
+
+            <!-- নতুন টাস্ক এসাইন ফর্ম -->
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                <h4 class="text-md font-bold text-slate-900 mb-4 flex items-center gap-2">🎯 নতুন কমপ্লেইন বা টাস্ক এসাইন করুন</h4>
+                <form onsubmit="assignTaskAdmin(event)" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <input type="text" id="taskCustId" required placeholder="কাস্টমার আইডি (যেমন: CID-101)" class="p-3 border border-slate-300 rounded-xl font-bold">
+                    <input type="text" id="taskCustName" required placeholder="কাস্টমারের নাম" class="p-3 border border-slate-300 rounded-xl">
+                    <select id="taskCollectorSelect" required class="p-3 border border-slate-300 rounded-xl bg-white font-medium"></select>
+                    <input type="text" id="taskDetails" required placeholder="সমস্যার বিবরণ (যেমন: ইন্টারনেট সংযোগ বিচ্ছিন্ন)" class="p-3 border border-slate-300 rounded-xl">
+                    <button type="submit" class="md:col-span-4 bg-teal-600 hover:bg-teal-700 text-white font-bold py-3.5 rounded-xl shadow transition">টাস্ক এসাইন করুন</button>
+                </form>
+            </div>
+
+            <!-- টাস্ক লিস্ট -->
+            <div>
+                <h4 class="text-md font-bold text-slate-900 mb-3">এসাইনকৃত টাস্কের বর্তমান স্ট্যাটাস</h4>
+                <div id="adminTaskListContainer" class="space-y-4"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDK Compat Modules -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+
+    <script>
+        // ==========================================
+        // আপনার FIREBASE CONFIGURATION এখানে বসান
+        // ==========================================
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_PROJECT_ID.appspot.com",
+            messagingSenderId: "YOUR_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        let currentUser = null;
+        let allCustomers = [];
+        let adminAllCustomers = [];
+        const ADMIN_WHATSAPP_NUMBER = "8801700000000"; // এখানে এডমিনের সঠিক হোয়াটসঅ্যাপ নম্বর বসান
+
+        async function initSystem() {
+            const adminRef = db.collection('users').doc('admin');
+            const doc = await adminRef.get();
+            if (!doc.exists) {
+                await adminRef.set({
+                    name: 'প্রধান অ্যাডমিন',
+                    username: 'admin',
+                    password: '1234',
+                    role: 'admin'
+                });
+            }
+            document.getElementById('whatsappSupportBtn').href = `https://wa.me/${ADMIN_WHATSAPP_NUMBER}?text=প্রয়োজনীয়%20সহায়তা%20চাচ্ছি।`;
+        }
+        initSystem();
+
+        // ১. লগইন লজিক
+        async function handleLogin(e) {
+            e.preventDefault();
+            const u = document.getElementById('loginUser').value.trim();
+            const p = document.getElementById('loginPass').value.trim();
+            const errEl = document.getElementById('loginError');
+
+            const snap = await db.collection('users').where('username', '==', u).where('password', '==', p).get();
+            if (snap.empty) {
+                errEl.classList.remove('hidden');
+                return;
+            }
+            errEl.classList.add('hidden');
+            const doc = snap.docs[0];
+            currentUser = { id: doc.id, ...doc.data() };
+
+            document.getElementById('loginView').classList.add('hidden');
+            document.getElementById('appHeader').classList.remove('hidden');
+            document.getElementById('userBadge').innerText = `${currentUser.name} (${currentUser.role})`;
+
+            if (currentUser.role === 'admin') {
+                openAdminPanel();
+            } else {
+                updateCollectorPointBadge();
+                listenToCollectorTasks();
+                if (currentUser.permission === 'net') {
+                    openBillSection('net', false);
+                } else if (currentUser.permission === 'dish') {
+                    openBillSection('dish', false);
+                } else {
+                    showChoiceView();
+                }
+            }
+        }
+
+        function updateCollectorPointBadge() {
+            const badge = document.getElementById('collectorPointBadge');
+            badge.classList.remove('hidden');
+            db.collection('users').doc(currentUser.id).onSnapshot(doc => {
+                if (doc.exists) {
+                    badge.innerText = `পয়েন্ট: ${doc.data().points || 0}`;
+                }
+            });
+        }
+
+        function showChoiceView() {
+            hideAllViews();
+            document.getElementById('collectorChoiceView').classList.remove('hidden');
+        }
+
+        // ২. এরিয়া-ভিত্তিক কাস্টমার ফিল্টারিং ও প্রদর্শন
+        async function openBillSection(type, allowBack = true) {
+            hideAllViews();
+            document.getElementById('customerListView').classList.remove('hidden');
+            
+            const backBtn = document.getElementById('backToChoiceBtn');
+            if (allowBack && currentUser.permission === 'both') {
+                backBtn.classList.remove('hidden');
+            } else {
+                backBtn.classList.add('hidden');
+            }
+
+            document.getElementById('listSectionTitle').innerText = type === 'net' ? '🌐 নেট বিল কাস্টমার তালিকা' : '📺 ডিশ বিল কাস্টমার তালিকা';
+
+            const assignedAreas = currentUser.assignedAreas ? currentUser.assignedAreas.split(',').map(a => a.trim().toLowerCase()) : [];
+
+            let query = db.collection('customers').where('type', '==', type);
+            const snap = await query.get();
+            
+            const allFetched = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+            if (currentUser.assignedAreas && !currentUser.assignedAreas.toLowerCase().includes('all')) {
+                allCustomers = allFetched.filter(c => c.address && assignedAreas.includes(c.address.trim().toLowerCase()));
+            } else {
+                allCustomers = allFetched;
+            }
+
+            renderCustomers(allCustomers);
+        }
+
+        function renderCustomers(list) {
+            const container = document.getElementById('customersContainer');
+            if (list.length === 0) {
+                container.innerHTML = `<div class="md:col-span-2 text-center p-8 bg-white rounded-2xl border"><p class="text-slate-500 font-semibold">আপনার এরিয়ার কোনো কাস্টমার পাওয়া যায়নি।</p></div>`;
+                return;
+            }
+            container.innerHTML = list.map(c => `
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex justify-between items-center hover:shadow-md transition">
+                    <div>
+                        <div class="flex items-center gap-2 mb-1">
+                            <span class="text-xs font-black bg-blue-100 text-blue-800 px-2.5 py-0.5 rounded-md font-mono">${c.customerId}</span>
+                            <span class="text-xs font-bold bg-slate-100 text-slate-700 px-2 py-0.5 rounded-md">📍 ${c.address || 'অন্যান্য'}</span>
+                            ${c.monthlyBill ? `<span class="text-xs font-bold bg-emerald-100 text-emerald-800 px-2.5 py-0.5 rounded-md">বিল: ৳${c.monthlyBill}</span>` : ''}
+                        </div>
+                        <h4 class="text-lg font-bold text-slate-900">${c.name}</h4>
+                        <p class="text-xs text-slate-500 mt-1 font-medium">
+                            ${c.phone ? `📞 ${c.phone} ` : ''}
+                            ${c.userId ? `| 🆔 User: <b class="font-mono text-slate-700">${c.userId}</b>` : ''}
+                        </p>
+                    </div>
+                    <button onclick="openPaymentModal('${c.customerId}', '${c.name}', '${c.type}', '${c.monthlyBill || ''}')" 
+                        class="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-4 py-2.5 rounded-xl text-xs font-bold shadow-md whitespace-nowrap transition active:scale-95">
+                        বিল কালেক্ট
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        function filterCustomers() {
+            const q = document.getElementById('searchCustomer').value.toLowerCase();
+            const filtered = allCustomers.filter(c => 
+                (c.name && c.name.toLowerCase().includes(q)) || 
+                (c.customerId && c.customerId.toLowerCase().includes(q)) ||
+                (c.userId && c.userId.toLowerCase().includes(q)) ||
+                (c.phone && c.phone.includes(q)) ||
+                (c.address && c.address.toLowerCase().includes(q))
+            );
+            renderCustomers(filtered);
+        }
+
+        // ৩. পেমেন্ট সাবমিশন
+        function openPaymentModal(custId, custName, type, defaultBill) {
+            document.getElementById('payCustomerId').value = custId;
+            document.getElementById('payCustomerName').value = custName;
+            document.getElementById('payBillType').value = type;
+            document.getElementById('payAmount').value = defaultBill;
+            document.getElementById('modalCustomerInfo').innerText = `${custName} (${custId}) - ${type === 'net' ? 'নেট বিল' : 'ডিশ বিল'}`;
+            document.getElementById('paymentModal').classList.remove('hidden');
+        }
+
+        function closePaymentModal() {
+            document.getElementById('paymentModal').classList.add('hidden');
+        }
+
+        async function submitPaymentRequest(e) {
+            e.preventDefault();
+            const amount = Number(document.getElementById('payAmount').value);
+            const trxId = document.getElementById('payTrxId').value.trim().toUpperCase();
+            const method = document.getElementById('payMethod').value;
+            const customerId = document.getElementById('payCustomerId').value;
+            const customerName = document.getElementById('payCustomerName').value;
+            const billType = document.getElementById('payBillType').value;
+
+            await db.collection('requests').add({
+                collectorId: currentUser.id,
+                collectorName: currentUser.name,
+                collectorArea: currentUser.assignedAreas || '',
+                customerId, customerName, billType, method, amount, trxId,
+                status: 'pending',
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+
+            alert('✅ পেমেন্ট তথ্য সফলভাবে অ্যাডমিনের কাছে পাঠানো হয়েছে!');
+            closePaymentModal();
+            e.target.reset();
+        }
+
+        // ৪. অ্যাডমিন প্যানেল লজিক
+        function openAdminPanel() {
+            hideAllViews();
+            document.getElementById('adminView').classList.remove('hidden');
+            loadPendingRequests();
+            loadCollectorsAdmin();
+            loadAdminCustomers();
+            loadAdminTasks();
+        }
+
+        function switchTab(tabId) {
+            if (tabId === 'tabMyTasks') {
+                document.getElementById('customersTabSection').classList.add('hidden');
+                document.getElementById('myTasksTabSection').classList.remove('hidden');
+                document.getElementById('myTasksTabBtn').classList.replace('bg-amber-100', 'bg-amber-500');
+            }
+        }
+
+        function switchAdminTab(tab, btnEl) {
+            ['tabRequests', 'tabCollectors', 'tabCustomers', 'tabTasks'].forEach(id => document.getElementById(id).classList.add('hidden'));
+            document.querySelectorAll('.admin-tab').forEach(b => b.className = b.className.replace(/bg-blue-600 text-white/g, 'bg-white text-slate-700 border border-slate-200'));
+            
+            if (tab === 'requests') document.getElementById('tabRequests').classList.remove('hidden');
+            if (tab === 'collectors') document.getElementById('tabCollectors').classList.remove('hidden');
+            if (tab === 'customers') document.getElementById('tabCustomers').classList.remove('hidden');
+            if (tab === 'tasks') document.getElementById('tabTasks').classList.remove('hidden');
+
+            btnEl.className = btnEl.className.replace(/bg-white text-slate-700 border border-slate-200/g, 'bg-blue-600 text-white');
+        }
+
+        function loadPendingRequests() {
+            db.collection('requests').where('status', '==', 'pending').onSnapshot(snap => {
+                const container = document.getElementById('pendingRequestsList');
+                document.getElementById('pendingCountDisplay').innerText = snap.size;
+                if (snap.empty) {
+                    container.innerHTML = `<div class="bg-white p-6 rounded-2xl border text-center text-slate-500 font-semibold">কোনো পেন্ডিং রিকোয়েস্ট নেই।</div>`;
+                    return;
+                }
+                container.innerHTML = snap.docs.map(doc => {
+                    const r = doc.data();
+                    return `
+                        <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col md:flex-row justify-between md:items-center gap-4">
+                            <div>
+                                <span class="text-xs font-bold px-2.5 py-0.5 rounded-md ${r.billType === 'net' ? 'bg-indigo-100 text-indigo-800' : 'bg-emerald-100 text-emerald-800'}">
+                                    ${r.billType === 'net' ? '🌐 নেট বিল' : '📺 ডিশ বিল'}
+                                </span>
+                                <span class="text-xs font-bold bg-amber-100 text-amber-800 px-2.5 py-0.5 rounded-md ml-1">${r.method}</span>
+                                <h4 class="font-extrabold text-slate-900 mt-2 text-lg">${r.customerName} (${r.customerId})</h4>
+                                <p class="text-xs text-slate-600">কালেক্টর: <b>${r.collectorName}</b> | এলাকা: <b>${r.collectorArea || 'N/A'}</b> | এসাইনড অ্যামাউন্ট: <b class="text-blue-600 text-sm">৳${r.amount}</b></p>
+                                <p class="text-xs font-mono bg-slate-100 p-1 rounded mt-1 inline-block text-slate-700">TrxID: <b class="text-slate-900">${r.trxId}</b></p>
+                            </div>
+                            <div class="flex gap-2">
+                                <button onclick="approveRequest('${doc.id}', '${r.collectorId}', ${r.amount})" class="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl text-xs font-bold shadow transition">Approve</button>
+                                <button onclick="rejectRequest('${doc.id}')" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2.5 rounded-xl text-xs font-bold transition">বাতিল</button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            });
+        }
+
+        async function approveRequest(reqId, collectorId, amount) {
+            await db.collection('requests').doc(reqId).update({ status: 'approved' });
+            await db.collection('users').doc(collectorId).update({
+                points: firebase.firestore.FieldValue.increment(amount)
+            });
+            alert('🎉 রিকোয়েস্ট সফলভাবে এপ্রুভ হয়েছে এবং পয়েন্ট যোগ করা হয়েছে!');
+        }
+
+        async function rejectRequest(reqId) {
+            if (!confirm('আপনি কি এই রিকোয়েস্টটি রিজেক্ট করতে চান?')) return;
+            await db.collection('requests').doc(reqId).update({ status: 'rejected' });
+        }
+
+        // কালেক্টর ম্যানেজমেন্ট
+        async function createCollector(e) {
+            e.preventDefault();
+            const name = document.getElementById('newColName').value.trim();
+            const username = document.getElementById('newColUser').value.trim();
+            const password = document.getElementById('newColPass').value.trim();
+            const permission = document.getElementById('newColPerm').value;
+            const assignedAreas = document.getElementById('newColAreas').value.trim();
+
+            await db.collection('users').add({
+                name, username, password, permission, assignedAreas,
+                role: 'collector',
+                points: 0
+            });
+
+            alert('✨ নতুন কালেক্টর সফলভাবে যুক্ত হয়েছে!');
+            e.target.reset();
+            loadCollectorsAdmin();
+        }
+
+        function loadCollectorsAdmin() {
+            db.collection('users').where('role', '==', 'collector').onSnapshot(snap => {
+                const container = document.getElementById('collectorsAdminList');
+                container.innerHTML = snap.docs.map(doc => {
+                    const c = doc.data();
+                    return `
+                        <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 space-y-3">
+                            <div class="flex flex-col sm:flex-row justify-between sm:items-start gap-2">
+                                <div>
+                                    <h4 class="font-extrabold text-lg text-slate-900">${c.name} <span class="text-xs text-slate-500 font-normal">(@${c.username})</span></h4>
+                                    <p class="text-xs text-blue-600 font-bold mt-0.5">পারমিশন: <span class="uppercase">${c.permission}</span> | বর্তমান পয়েন্ট: <b class="text-slate-900 text-sm">${c.points || 0}</b></p>
+                                    <p class="text-xs text-slate-600 mt-1">দায়িত্বপ্রাপ্ত এরিয়া: <span class="bg-slate-100 px-2 py-0.5 rounded font-semibold text-slate-800">${c.assignedAreas || 'কোনোটি না'}</span></p>
+                                </div>
+                                <select onchange="changePermission('${doc.id}', this.value)" class="text-xs border p-2 rounded-xl bg-slate-50 font-bold">
+                                    <option value="both" ${c.permission === 'both' ? 'selected' : ''}>Permission: Both</option>
+                                    <option value="net" ${c.permission === 'net' ? 'selected' : ''}>Permission: Net</option>
+                                    <option value="dish" ${c.permission === 'dish' ? 'selected' : ''}>Permission: Dish</option>
+                                </select>
+                            </div>
+                            <div class="flex flex-wrap gap-2 pt-3 border-t border-slate-100">
+                                <button onclick="adjustPoints('${doc.id}', 1)" class="bg-emerald-100 hover:bg-emerald-200 text-emerald-800 px-4 py-2 rounded-xl text-xs font-bold transition">+ পয়েন্ট যোগ</button>
+                                <button onclick="adjustPoints('${doc.id}', -1)" class="bg-amber-100 hover:bg-amber-200 text-amber-800 px-4 py-2 rounded-xl text-xs font-bold transition">- পয়েন্ট মাইনাস</button>
+                                <button onclick="resetPoints('${doc.id}')" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-xl text-xs font-bold transition ml-auto">ক্রেডিট দিয়ে রিসেট (0)</button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            });
+        }
+
+        async function changePermission(userId, newPerm) {
+            await db.collection('users').doc(userId).update({ permission: newPerm });
+            alert('⚡ পারমিশন আপডেট করা হয়েছে!');
+        }
+
+        async function adjustPoints(userId, multiplier) {
+            const val = prompt(multiplier > 0 ? 'কত পয়েন্ট যোগ করতে চান?' : 'কত পয়েন্ট মাইনাস করতে চান?');
+            if (!val || isNaN(val)) return;
+            await db.collection('users').doc(userId).update({
+                points: firebase.firestore.FieldValue.increment(Number(val) * multiplier)
+            });
+        }
+
+        async function resetPoints(userId) {
+            if (!confirm('⚠️ আপনি কি নিশ্চিত যে ক্রেডিট বুঝিয়ে দিয়েছেন এবং পয়েন্ট ০ (জিরো) করতে চান?')) return;
+            await db.collection('users').doc(userId).update({ points: 0 });
+            alert('🔄 পয়েন্ট রিসেট করা হয়েছে!');
+        }
+
+        // ৫. বাল্ক এক্সেল ও কাস্টমার ম্যানেজমেন্ট
+        function downloadDemoExcel() {
+            const demoData = [
+                { BillType: "net", CustomerID: "CID-101", Name: "মোঃ করিম উদ্দিন", UserID: "karim_net", Password: "123", Phone: "01700000001", MonthlyBill: 500, Address: "তাহেরপুর" },
+                { BillType: "dish", CustomerID: "DISH-201", Name: "আব্দুল জলিল", UserID: "", Password: "", Phone: "01800000002", MonthlyBill: 250, Address: "কার্তিকপাড়া" }
+            ];
+            const worksheet = XLSX.utils.json_to_sheet(demoData);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Customers_Demo");
+            XLSX.writeFile(workbook, "Advanced_Customer_Demo.xlsx");
+        }
+
+        function processBulkUpload() {
+            const fileInput = document.getElementById('bulkFileInput');
+            const statusMsg = document.getElementById('bulkStatusMsg');
+            const btn = document.getElementById('bulkUploadBtn');
+
+            if (!fileInput.files.length) {
+                alert('অনুগ্রহ করে একটি CSV বা Excel ফাইল সিলেক্ট করুন!');
+                return;
+            }
+
+            const file = fileInput.files[0];
+            const reader = new FileReader();
+
+            btn.disabled = true;
+            btn.innerText = 'প্রসেস হচ্ছে...';
+            statusMsg.classList.remove('hidden');
+            statusMsg.innerText = 'ডাটা ভ্যালিডেশন ও আপলোড চলছে...';
+
+            reader.onload = async function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const rows = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
+
+                    if (rows.length === 0) {
+                        alert('ফাইলে কোনো ডাটা নেই!');
+                        return;
+                    }
+
+                    let count = 0;
+                    const batch = db.batch();
+
+                    rows.forEach(row => {
+                        const rawType = String(row.BillType || 'net').trim().toLowerCase();
+                        const type = (rawType === 'dish' || rawType === 'ডিশ') ? 'dish' : 'net';
+                        const customerId = String(row.CustomerID || '').trim();
+                        const name = String(row.Name || '').trim();
+                        const address = String(row.Address || '').trim();
+
+                        if (customerId && name) {
+                            const newDocRef = db.collection('customers').doc();
+                            batch.set(newDocRef, {
+                                type, customerId, name, address,
+                                userId: String(row.UserID || '').trim(),
+                                password: String(row.Password || '').trim(),
+                                phone: String(row.Phone || '').trim(),
+                                monthlyBill: Number(row.MonthlyBill || 0),
+                                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                            });
+                            count++;
+                        }
+                    });
+
+                    await batch.commit();
+                    statusMsg.innerText = `সফলভাবে ${count} জন কাস্টমার ডাটাবেজে যুক্ত হয়েছে!`;
+                    fileInput.value = '';
+                    alert(`✅ মোট ${count} জন কাস্টমার বাল্ক আপলোড সম্পন্ন হয়েছে!`);
+                } catch (err) {
+                    console.error(err);
+                    alert('❌ ফাইল প্রসেসিংয়ে সমস্যা হয়েছে! ডেমো এক্সেল ফাইলের কলাম অনুযায়ী ডাটা সাজানো আছে কিনা নিশ্চিত করুন।');
+                } finally {
+                    btn.disabled = false;
+                    btn.innerText = '⬆ বাল্ক ফাইল প্রসেস করুন';
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function exportAllCustomersExcel() {
+            if (adminAllCustomers.length === 0) {
+                alert('এক্সপোর্ট করার মতো ডাটা নেই!');
+                return;
+            }
+            const exportData = adminAllCustomers.map(c => ({
+                BillType: c.type || 'net',
+                CustomerID: c.customerId || '',
+                Name: c.name || '',
+                UserID: c.userId || '',
+                Password: c.password || '',
+                Phone: c.phone || '',
+                MonthlyBill: c.monthlyBill || 0,
+                Address: c.address || ''
+            }));
+            const worksheet = XLSX.utils.json_to_sheet(exportData);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "All_Customers_Backup");
+            XLSX.writeFile(workbook, "All_Customers_Backup.xlsx");
+        }
+
+        async function addManualCustomer(e) {
+            e.preventDefault();
+            const type = document.getElementById('custType').value;
+            const customerId = document.getElementById('custId').value.trim();
+            const name = document.getElementById('custName').value.trim();
+            const userId = document.getElementById('custUserId').value.trim();
+            const password = document.getElementById('custPassword').value.trim();
+            const phone = document.getElementById('custPhone').value.trim();
+            const monthlyBill = Number(document.getElementById('custBill').value || 0);
+            const address = document.getElementById('custAddress').value.trim();
+
+            await db.collection('customers').add({
+                type, customerId, name, userId, password, phone, monthlyBill, address,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+
+            alert('✨ কাস্টমার সফলভাবে সেভ হয়েছে!');
+            e.target.reset();
+        }
+
+        function loadAdminCustomers() {
+            db.collection('customers').orderBy('createdAt', 'desc').onSnapshot(snap => {
+                adminAllCustomers = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                document.getElementById('totalCustCount').innerText = adminAllCustomers.length;
+                renderAdminCustomerTable(adminAllCustomers);
+                populateTaskCollectorSelect();
+            });
+        }
+
+        function renderAdminCustomerTable(list) {
+            const tbody = document.getElementById('adminCustomerTableBody');
+            tbody.innerHTML = list.map(c => `
+                <tr class="border-b border-slate-100 hover:bg-slate-50 transition">
+                    <td class="p-3"><span class="text-xs font-bold px-2 py-0.5 rounded-md ${c.type === 'net' ? 'bg-indigo-100 text-indigo-800' : 'bg-emerald-100 text-emerald-800'}">${c.type === 'net' ? 'নেট' : 'ডিশ'}</span></td>
+                    <td class="p-3 font-bold font-mono text-slate-900">${c.customerId}</td>
+                    <td class="p-3 font-semibold text-slate-800">${c.name}<br><span class="text-xs text-slate-500 font-normal">📞 ${c.phone || '-'}</span></td>
+                    <td class="p-3 font-bold text-xs"><span class="bg-slate-100 px-2 py-1 rounded border">${c.address || 'N/A'}</span></td>
+                    <td class="p-3 text-xs font-mono bg-slate-50/50 rounded">${c.userId || '-'} / ${c.password || '-'}</td>
+                    <td class="p-3 font-extrabold text-blue-600">৳${c.monthlyBill || 0}</td>
+                    <td class="p-3 text-right"><button onclick="deleteCustomer('${c.id}')" class="text-red-600 hover:underline text-xs font-bold">ডিলিট</button></td>
+                </tr>
+            `).join('');
+        }
+
+        function filterAdminCustomers() {
+            const q = document.getElementById('searchAdminCust').value.toLowerCase();
+            const filtered = adminAllCustomers.filter(c => 
+                (c.name && c.name.toLowerCase().includes(q)) || 
+                (c.customerId && c.customerId.toLowerCase().includes(q)) ||
+                (c.phone && c.phone.includes(q)) ||
+                (c.address && c.address.toLowerCase().includes(q))
+            );
+            renderAdminCustomerTable(filtered);
+        }
+
+        async function deleteCustomer(docId) {
+            if (!confirm('⚠️ আপনি কি নিশ্চিত যে এই কাস্টমারকে ডিলিট করতে চান?')) return;
+            await db.collection('customers').doc(docId).delete();
+        }
+
+        // ৬. অ্যাডমিন-কালেক্টর টাস্ক রিপোর্টিং সিস্টেম
+        async function populateTaskCollectorSelect() {
+            const snap = await db.collection('users').where('role', '==', 'collector').get();
+            const select = document.getElementById('taskCollectorSelect');
+            select.innerHTML = snap.docs.map(doc => {
+                const c = doc.data();
+                return `<option value="${doc.id}|${c.name}">${c.name} (${c.assignedAreas || 'All'})</option>`;
+            }).join('');
+        }
+
+        async function assignTaskAdmin(e) {
+            e.preventDefault();
+            const [collectorId, collectorName] = document.getElementById('taskCollectorSelect').value.split('|');
+            const customerId = document.getElementById('taskCustId').value.trim();
+            const customerName = document.getElementById('taskCustName').value.trim();
+            const details = document.getElementById('taskDetails').value.trim();
+
+            await db.collection('tasks').add({
+                collectorId, collectorName, customerId, customerName, details,
+                status: 'pending',
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+
+            alert('🎯 কাস্টমার টাস্ক সফলভাবে কালেক্টরের কাছে এসাইন করা হয়েছে!');
+            e.target.reset();
+        }
+
+        function loadAdminTasks() {
+            db.collection('tasks').orderBy('createdAt', 'desc').onSnapshot(snap => {
+                const container = document.getElementById('adminTaskListContainer');
+                if (snap.empty) {
+                    container.innerHTML = `<div class="bg-white p-6 rounded-2xl border text-center text-slate-500 font-semibold">কোনো সক্রিয় টাস্ক নেই।</div>`;
+                    return;
+                }
+                container.innerHTML = snap.docs.map(doc => {
+                    const t = doc.data();
+                    let badgeClass = 'bg-amber-100 text-amber-800';
+                    let statusText = 'পেন্ডিং';
+                    if (t.status === 'completed') {
+                        badgeClass = 'bg-blue-100 text-blue-800';
+                        statusText = 'কালেক্টর কর্তৃক সম্পন্ন (এপ্রুভ করুন)';
+                    } else if (t.status === 'approved') {
+                        badgeClass = 'bg-emerald-100 text-emerald-800';
+                        statusText = 'সম্পূর্ণ ও অনুমোদিত';
+                    }
+
+                    return `
+                        <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col md:flex-row justify-between md:items-center gap-4">
+                            <div>
+                                <span class="text-xs font-bold px-2.5 py-0.5 rounded-md ${badgeClass}">${statusText}</span>
+                                <h4 class="font-extrabold text-slate-900 mt-2 text-lg">${t.customerName} (${t.customerId})</h4>
+                                <p class="text-sm text-slate-700 mt-1">📝 সমস্যা: <b>${t.details}</b></p>
+                                <p class="text-xs text-slate-500 mt-0.5">দায়িত্বপ্রাপ্ত কালেক্টর: <b class="text-slate-800">${t.collectorName}</b></p>
+                            </div>
+                            <div>
+                                ${t.status === 'completed' ? `<button onclick="approveTask('${doc.id}')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl text-xs font-bold shadow transition w-full md:w-auto">টাস্ক কমপ্লিশন Approve করুন</button>` : ''}
+                                ${t.status === 'pending' ? `<span class="text-xs text-slate-400 italic">কালেক্টরের রিপোর্টের অপেক্ষায়...</span>` : ''}
+                                ${t.status === 'approved' ? `<span class="text-xs font-extrabold text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-xl border">✔ ক্লোজড</span>` : ''}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            });
+        }
+
+        async function approveTask(taskId) {
+            await db.collection('tasks').doc(taskId).update({ status: 'approved' });
+            alert('✔ টাস্কটি সফলভাবে ক্লোজ ও অনুমোদন করা হয়েছে!');
+        }
+
+        function listenToCollectorTasks() {
+            db.collection('tasks').where('collectorId', '==', currentUser.id).where('status', '==', 'pending').onSnapshot(snap => {
+                const count = snap.size;
+                const badge = document.getElementById('taskCountBadge');
+                const container = document.getElementById('collectorTasksContainer');
+                
+                if (count > 0) {
+                    badge.classList.remove('hidden');
+                    badge.innerText = count;
+                } else {
+                    badge.classList.add('hidden');
+                }
+
+                if (snap.empty) {
+                    container.innerHTML = `<div class="bg-white p-6 rounded-2xl border text-center text-slate-500 font-semibold">আপাতত কোনো নতুন টাস্ক নেই।</div>`;
+                    return;
+                }
+
+                container.innerHTML = snap.docs.map(doc => {
+                    const t = doc.data();
+                    return `
+                        <div class="bg-amber-50 p-5 rounded-2xl shadow-sm border border-amber-200 flex flex-col md:flex-row justify-between md:items-center gap-4 animate-pulse">
+                            <div>
+                                <span class="bg-amber-400 text-slate-900 text-xs font-black px-2.5 py-0.5 rounded-md">জরুরি টাস্ক</span>
+                                <h4 class="font-extrabold text-slate-900 mt-2 text-lg">${t.customerName} (${t.customerId})</h4>
+                                <p class="text-sm text-slate-800 mt-1">সমস্যা: ${t.details}</p>
+                            </div>
+                            <button onclick="markTaskComplete('${doc.id}')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-xl text-xs font-extrabold shadow-lg shadow-emerald-500/20 transition whitespace-nowrap active:scale-95">✔ কাজ সম্পন্ন করেছি (অ্যাডমিনকে জানান)</button>
+                        </div>
+                    `;
+                }).join('');
+            });
+        }
+
+        async function markTaskComplete(taskId) {
+            if (!confirm('আপনি কি নিশ্চিত যে আপনি এই সমস্যাটি সমাধান করেছেন?')) return;
+            await db.collection('tasks').doc(taskId).update({ status: 'completed' });
+            alert('🚀 অ্যাডমিনের কাছে কমপ্লিশন নোটিফিকেশন পাঠানো হয়েছে!');
+        }
+
+        function hideAllViews() {
+            ['loginView', 'collectorChoiceView', 'customerListView', 'adminView'].forEach(id => {
+                document.getElementById(id).classList.add('hidden');
+            });
+        }
+
+        function logout() {
+            currentUser = null;
+            hideAllViews();
+            document.getElementById('appHeader').classList.add('hidden');
+            document.getElementById('collectorPointBadge').classList.add('hidden');
+            document.getElementById('loginView').classList.remove('hidden');
+        }
+    </script>
+</body>
+</html>
